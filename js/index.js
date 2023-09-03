@@ -24,7 +24,12 @@ onload = () => {
       y: e.clientY * devicePixelRatio,
     };
 
-    game.mullet.seekMouse(mousePos);
+    const angle = Math.atan2(
+      mousePos.y - game.mullet.pos.y,
+      mousePos.x - game.mullet.pos.x
+    );
+
+    game.mullet.seekMouse(mousePos, angle);
   });
 
   addEventListener("keypress", (e) => {

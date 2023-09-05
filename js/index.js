@@ -1,3 +1,5 @@
+"use strict";
+
 onload = () => {
   const canvas = document.querySelector("canvas");
   const ctx = canvas.getContext("2d");
@@ -7,7 +9,7 @@ onload = () => {
 
   ctx.scale(devicePixelRatio, devicePixelRatio);
 
-  const game = new Game({ canvas, ctx });
+  const game = new Game(canvas, ctx);
 
   (function animate() {
     ctx.reset();
@@ -24,17 +26,28 @@ onload = () => {
       y: e.clientY * devicePixelRatio,
     };
 
-    const angle = Math.atan2(
-      mousePos.y - game.mullet.pos.y,
-      mousePos.x - game.mullet.pos.x
-    );
-
-    game.mullet.seekMouse(mousePos, angle);
+    game.mullet.seekMouse(mousePos);
   });
 
   addEventListener("keypress", (e) => {
-    if (e.key === "f") {
-      game.mullet.toggleFollow();
+    if (e.key === " ") {
+      if (
+        game.mullet.currentBehaviour === "CURIOUS" ||
+        game.mullet.currentBehaviour === "FLEE"
+      ) {
+        game.mullet.toggleBehaviour("FOLLOW");
+      } else {
+        game.mullet.toggleBehaviour("CURIOUS");
+      }
+    } else if (e.key === "f") {
+      if (
+        game.mullet.currentBehaviour === "CURIOUS" ||
+        game.mullet.currentBehaviour === "FOLLOW"
+      ) {
+        game.mullet.toggleBehaviour("FLEE");
+      } else {
+        game.mullet.toggleBehaviour("CURIOUS");
+      }
     }
   });
 };

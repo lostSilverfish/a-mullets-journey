@@ -1,5 +1,6 @@
 class Mullet {
-  constructor({ pos, game }) {
+  constructor(pos, game) {
+    this.game = game;
     this.colors = {
       hex: "#EB5E28",
       rgb: "235, 94, 40,",
@@ -7,6 +8,7 @@ class Mullet {
     this.size = {
       w: 50,
       h: 10,
+      r: 10,
     };
     this.pos = {
       x: pos.x - this.size.w / 2,
@@ -16,7 +18,10 @@ class Mullet {
       x: this.pos.x,
       y: this.pos.y,
     };
-    this.game = game;
+    this.currentMousePos = {
+      x: 0,
+      y: 0,
+    };
     this.stats = {
       hp: 10,
       maxHp: 100,
@@ -36,24 +41,6 @@ class Mullet {
       growSpeed: this.size.w / 150,
       alphaShrinkSpeed: this.size.w / 150 / (this.size.w * 2.5),
       alpha: 1,
-      // ripples: {
-      //   1: {
-      //     radius: 0,
-      //     alpha: 1,
-      //   },
-      // 2: {
-      //   radius: this.size.w * 0.5,
-      //   alpha: 1,
-      // },
-      // 3: {
-      //   radius: this.size.w,
-      //   alpha: 1,
-      // },
-      // 4: {
-      //   radius: this.size.w * 1.5,
-      //   alpha: 1,
-      // },
-      // },
     };
     this.boundaries = {
       left: this.collisionCircle.radius,
@@ -62,49 +49,6 @@ class Mullet {
       down: this.game.canvas.height - this.collisionCircle.radius,
     };
     this.currentBehaviour = "FOLLOW";
-    // this.directions = ["LEFT", "RIGHT", "UP", "DOWN"];
-    // this.currentDirection = "";
-    // this.curiosityBehaviours = {
-    //   LEFT: {
-    //     on: () => {
-    //       if (this.pos.x - this.collisionCircle.radius < this.boundaries.left) {
-    //         this.pos.x = this.boundaries.left;
-    //       } else {
-    //         this.nextPos.x -= this.stats.curiousSpeed;
-    //       }
-    //     },
-    //   },
-    //   RIGHT: {
-    //     on: () => {
-    //       if (
-    //         this.pos.x + this.collisionCircle.radius >
-    //         this.boundaries.right
-    //       ) {
-    //         this.pos.x = this.boundaries.right;
-    //       } else {
-    //         this.nextPos.x += this.stats.curiousSpeed;
-    //       }
-    //     },
-    //   },
-    //   UP: {
-    //     on: () => {
-    //       if (this.pos.y - this.collisionCircle.radius < this.boundaries.up) {
-    //         this.pos.y = this.boundaries.up;
-    //       } else {
-    //         this.nextPos.y -= this.stats.curiousSpeed;
-    //       }
-    //     },
-    //   },
-    //   DOWN: {
-    //     on: () => {
-    //       if (this.pos.y + this.collisionCircle.radius > this.boundaries.down) {
-    //         this.pos.y = this.boundaries.down;
-    //       } else {
-    //         this.nextPos.y += this.stats.curiousSpeed;
-    //       }
-    //     },
-    //   },
-    // };
     this.behaviours = {
       FLEE: {
         on: () => {
@@ -113,20 +57,6 @@ class Mullet {
       },
       CURIOUS: {
         on: () => {
-          // this.currentDirection =
-          //   this.directions[Math.floor(Math.random() * this.directions.length)];
-
-          // if (this.stats.curiosity >= this.stats.attentionSpan) {
-          //   this.currentDirection =
-          //     this.directions[
-          //       Math.floor(Math.random() * this.directions.length)
-          //     ];
-          // } else {
-          //   this.stats.curiosity += 0.01;
-          // }
-
-          // this.curiosityBehaviours[this.currentDirection].on();
-
           if (this.stats.curiosity >= this.stats.attentionSpan) {
             this.getCuriousPos();
             this.stats.curiosity = 0;
@@ -148,20 +78,51 @@ class Mullet {
         },
       },
     };
-
-    // this.follow = true;
-    // this.flee = false;
-    // this.curious = false;
+    this.moving = false;
+    this.redhan = [];
+    this.timeToSpawnRedhan = 0;
+    this.createRedhan();
   }
 
   draw(ctx) {
+    for (let i = 0; i < this.redhan.length; i++) {
+      if (!this.redhan[i].free) {
+        this.redhan[i].update();
+        this.redhan[i].draw(ctx);
+      }
+
+      if (this.redhan[i].free && this.timeToSpawnRedhan >= 2 && this.moving) {
+        this.redhan[i].spawn(
+          {
+            x: this.pos.x,
+            y: this.pos.y,
+          },
+          {
+            x: -Math.cos(this.stats.angle) + Math.random() * 2 - 1,
+            y: -Math.sin(this.stats.angle) + Math.random() * 2 - 1,
+          }
+        );
+        this.timeToSpawnRedhan = 0;
+        break;
+      } else {
+        this.timeToSpawnRedhan += 0.01;
+      }
+    }
+
     ctx.save();
-    ctx.fillStyle = this.colors.hex;
     ctx.translate(this.pos.x, this.pos.y);
     ctx.rotate(this.stats.angle);
-    ctx.fillRect(0 - this.size.w, 0 - this.size.h, this.size.w, this.size.h);
-
-    // this.spawnRipples(ctx);
+    ctx.fillStyle = this.colors.hex;
+    ctx.beginPath();
+    ctx.roundRect(
+      0 - this.size.w,
+      0 - this.size.h,
+      this.size.w,
+      this.size.h,
+      this.size.r
+    );
+    ctx.fill();
+    ctx.closePath();
 
     ctx.beginPath();
     ctx.strokeStyle = `rgba(${this.colors.rgb}${this.collisionCircle.alpha})`;
@@ -179,24 +140,22 @@ class Mullet {
   }
 
   update() {
-    // if (this.flee) {
-    //   this.pos.x += (this.nextPos.x - this.pos.x) * this.stats.fleeSpeed;
-    //   this.pos.y += (this.nextPos.y - this.pos.y) * this.stats.fleeSpeed;
-    // } else if (this.curious) {
-    // } else {
-    //   this.pos.x += (this.nextPos.x - this.pos.x) * this.stats.followSpeed;
-    //   this.pos.y += (this.nextPos.y - this.pos.y) * this.stats.followSpeed;
-    // }
+    if (this.collisionCircle.alpha < 0.2) {
+      this.collisionCircle.alpha = 1;
+    } else {
+      this.collisionCircle.alpha -= this.collisionCircle.alphaShrinkSpeed;
+    }
 
-    // if (this.collisionCircle.alpha < 0.2) {
-    //   this.collisionCircle.alpha = 1;
-    // } else {
-    //   this.collisionCircle.alpha -= this.collisionCircle.alphaShrinkSpeed;
-    // }
+    if (
+      Math.abs(this.nextPos.x - this.pos.x) > this.size.w * 3.5 ||
+      Math.abs(this.nextPos.y - this.pos.y) > this.size.w * 3.5
+    ) {
+      this.moving = true;
+    } else {
+      this.moving = false;
+    }
 
     this.behaviours[this.currentBehaviour].on();
-
-    // this.growRipples();
   }
 
   getCuriousPos() {
@@ -213,91 +172,47 @@ class Mullet {
     this.pos.y += (this.nextPos.y - this.pos.y) * speed;
   }
 
-  // growRipples() {
-  // if more ripples
-  //   // for (let ripple in this.collisionCircle.ripples) {
-  //   //   const currentRipple = this.collisionCircle.ripples[ripple];
-  //   //   if (currentRipple.radius >= this.collisionCircle.radius) {
-  //   //     currentRipple.radius = 0;
-  //   //     currentRipple.alpha = 1;
-  //   //   } else {
-  //   //     currentRipple.radius += this.collisionCircle.growSpeed;
-  //   //     currentRipple.alpha -= this.collisionCircle.alphaShrinkSpeed;
-  //   //   }
-  //   // }
+  seekMouse(mousePos) {
+    this.currentMousePos.x = mousePos.x;
+    this.currentMousePos.y = mousePos.y;
 
-  // if one ripple
-  //   if (this.collisionCircle.ripples[1].radius > this.collisionCircle.radius) {
-  //     this.collisionCircle.ripples[1].radius = 0;
-  //     this.collisionCircle.ripples[1].alpha = 0.25;
-  //   } else {
-  //     this.collisionCircle.ripples[1].radius += this.collisionCircle.growSpeed;
-  //     this.collisionCircle.ripples[1].alpha +=
-  //       this.collisionCircle.alphaShrinkSpeed;
-  //   }
-
-  //   if (
-  //     this.collisionCircle.ripples[1].radius === this.collisionCircle.radius
-  //   ) {
-  //     this.collisionCircle.ripples[1].alpha = 1;
-  //   }
-  // }
-
-  // spawnRipples(ctx) {
-  // if more ripple
-  //   // for (let ripple in this.collisionCircle.ripples) {
-  //   //   const currentRipple = this.collisionCircle.ripples[ripple];
-  //   //   ctx.beginPath();
-  //   //   ctx.strokeStyle = `rgba(${this.colors.rgb}${currentRipple.alpha})`;
-  //   //   ctx.arc(
-  //   //     0 - this.size.w / 2,
-  //   //     0 - this.size.h / 2,
-  //   //     currentRipple.radius,
-  //   //     0,
-  //   //     Math.PI * 2
-  //   //   );
-  //   //   ctx.stroke();
-  //   //   ctx.closePath();
-  //   // }
-
-  // if one ripple
-  //   ctx.beginPath();
-  //   ctx.strokeStyle = `rgba(${this.colors.rgb}${this.collisionCircle.ripples[1].alpha})`;
-  //   ctx.arc(
-  //     0 - this.size.w / 2,
-  //     0 - this.size.h / 2,
-  //     this.collisionCircle.ripples[1].radius,
-  //     0,
-  //     Math.PI * 2
-  //   );
-  //   ctx.stroke();
-  //   ctx.closePath();
-  // }
-
-  seekMouse(mousePos, angle) {
-    // if (this.follow && !this.curious) {
-    //   this.nextPos = mousePos;
-    //   this.stats.angle = angle;
-    // }
+    const angle = Math.atan2(mousePos.y - this.pos.y, mousePos.x - this.pos.x);
 
     if (this.currentBehaviour == "FOLLOW" || this.currentBehaviour === "FLEE") {
-      this.nextPos = mousePos;
+      this.nextPos.x = mousePos.x;
+      this.nextPos.y = mousePos.y;
       this.stats.angle = angle;
     }
   }
 
-  toggleFollow() {
-    // if (this.follow && !this.flee) {
-    //   this.follow = false;
-    //   this.curious = true;
-    // } else if (!this.follow && !this.flee) {
-    //   this.follow = true;
-    //   this.curious = false;
-    // }
-    if (this.currentBehaviour !== "FOLLOW") {
-      this.currentBehaviour = "FOLLOW";
-    } else {
-      this.currentBehaviour = "CURIOUS";
+  toggleBehaviour(behaviour) {
+    if (behaviour == "FLEE" || behaviour == "FOLLOW") {
+      const angle = Math.atan2(
+        this.currentMousePos.y - this.pos.y,
+        this.currentMousePos.x - this.pos.x
+      );
+      this.stats.angle = angle;
+      this.nextPos.x = this.currentMousePos.x;
+      this.nextPos.y = this.currentMousePos.y;
+    }
+
+    this.currentBehaviour = behaviour;
+  }
+
+  createRedhan() {
+    for (let i = 0; i < 20; i++) {
+      this.redhan.push(
+        new Redhan(
+          {
+            x: 0,
+            y: 0,
+          },
+          {
+            x: 0,
+            y: 0,
+          }
+        )
+      );
     }
   }
 }

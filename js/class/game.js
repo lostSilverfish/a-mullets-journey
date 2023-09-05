@@ -1,14 +1,14 @@
 class Game {
-  constructor({ canvas, ctx }) {
+  constructor(canvas, ctx) {
     this.canvas = canvas;
     this.ctx = ctx;
-    this.mullet = new Mullet({
-      pos: {
+    this.mullet = new Mullet(
+      {
         x: this.canvas.width / 2,
         y: this.canvas.height / 2,
       },
-      game: this,
-    });
+      this
+    );
   }
 
   draw() {

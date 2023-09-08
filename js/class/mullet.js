@@ -32,6 +32,7 @@ class Mullet {
       followSpeed: 0.025,
       curiousSpeed: 0.01,
       fleeSpeed: 0.1,
+      nextPosSpeed: 5,
       angle: 0,
       attentionSpan: 50,
       curiosity: 25,
@@ -48,6 +49,63 @@ class Mullet {
       up: this.collisionCircle.radius,
       down: this.game.canvas.height - this.collisionCircle.radius,
     };
+    this.curiousDirections = [
+      "LEFT",
+      "RIGHT",
+      "UP",
+      "DOWN",
+      "DOWN",
+      "RIGHT",
+      "LEFT",
+      "UP",
+      "LEFT",
+      "UP",
+      "RIGHT",
+      "DOWN",
+    ];
+    this.currentCuriousDirection = "RIGHT";
+    this.nextPosMove = {
+      LEFT: {
+        on: () => {
+          if (this.nextPos.x < this.boundaries.left) {
+            this.nextPos.x += this.stats.nextPosSpeed;
+            this.currentCuriousDirection = "RIGHT";
+          } else {
+            this.nextPos.x -= this.stats.nextPosSpeed;
+          }
+        },
+      },
+      RIGHT: {
+        on: () => {
+          if (this.nextPos.x > this.boundaries.right) {
+            this.nextPos.x -= this.stats.nextPosSpeed;
+            this.currentCuriousDirection = "LEFT";
+          } else {
+            this.nextPos.x += this.stats.nextPosSpeed;
+          }
+        },
+      },
+      UP: {
+        on: () => {
+          if (this.nextPos.y < this.boundaries.up) {
+            this.nextPos.y += this.stats.nextPosSpeed;
+            this.currentCuriousDirection = "DOWN";
+          } else {
+            this.nextPos.y -= this.stats.nextPosSpeed;
+          }
+        },
+      },
+      DOWN: {
+        on: () => {
+          if (this.nextPos.y > this.boundaries.down) {
+            this.nextPos.y -= this.stats.nextPosSpeed;
+            this.currentCuriousDirection = "UP";
+          } else {
+            this.nextPos.y += this.stats.nextPosSpeed;
+          }
+        },
+      },
+    };
     this.currentBehaviour = "FOLLOW";
     this.behaviours = {
       FLEE: {
@@ -57,12 +115,24 @@ class Mullet {
       },
       CURIOUS: {
         on: () => {
+          // if (this.stats.curiosity >= this.stats.attentionSpan) {
+          //   this.getCuriousPos();
+          //   this.stats.curiosity = 0;
+          // } else {
+          //   this.stats.curiosity += 0.25;
+          // }
+
           if (this.stats.curiosity >= this.stats.attentionSpan) {
-            this.getCuriousPos();
+            this.currentCuriousDirection =
+              this.curiousDirections[
+                Math.floor(Math.random() * this.curiousDirections.length)
+              ];
             this.stats.curiosity = 0;
           } else {
             this.stats.curiosity += 0.25;
           }
+
+          this.nextPosMove[this.currentCuriousDirection].on();
 
           this.stats.angle = Math.atan2(
             this.nextPos.y - this.pos.y,
@@ -159,12 +229,12 @@ class Mullet {
   }
 
   getCuriousPos() {
-    this.nextPos.x = Math.floor(
-      Math.random() * this.boundaries.right + this.boundaries.left
-    );
-    this.nextPos.y = Math.floor(
-      Math.random() * this.boundaries.down + this.boundaries.up
-    );
+    // this.nextPos.x = Math.floor(
+    //   Math.random() * this.boundaries.right + this.boundaries.left
+    // );
+    // this.nextPos.y = Math.floor(
+    //   Math.random() * this.boundaries.down + this.boundaries.up
+    // );
   }
 
   move(speed) {
